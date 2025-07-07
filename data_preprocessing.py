@@ -3,6 +3,7 @@ import pandas as pd
 from shapely.geometry import Point
 from utils import count_houses, plot_ratio_map
 import osmnx as ox
+from catastro.atom import ATOM_Query
 
 rental_houses = [  'Entire rental unit', 
             'Entire condo',
@@ -26,7 +27,7 @@ rental_houses = [  'Entire rental unit',
 if __name__ == "__main__":
     query = ATOM_Query('Barcelona', 'Barcelona')
     parcels = query.download_gml()
-    parcels.to_crs(boundary.crs, inplace=True)
+    parcels.to_crs("EPSG:4326", inplace=True)
     bcn = pd.read_csv("data/barcelona.csv")
     bcn['geometry'] = gpd.points_from_xy(bcn['longitude'], bcn['latitude'])
     bcn = gpd.GeoDataFrame(bcn, geometry='geometry', crs="EPSG:4326")
