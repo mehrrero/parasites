@@ -107,8 +107,11 @@ def plot_ratio_map(gdf, base_gdf, ax, ratio_col='ratio', cmap_name='Reds', n_tic
     cbar = plt.colorbar(sm, ax=ax, fraction=0.03, pad=0.04)
     cbar.set_label("Ratio (%)")
     cbar.set_ticks(ticks)
-    cbar.set_ticklabels([f"{tick :.1f}%" for tick in ticks])
+    cbar.set_ticklabels([f"{tick :.0f}%" for tick in ticks])
 
+    # Increase colorbar label and tick label sizes
+    cbar.ax.yaxis.label.set_size(16)
+    cbar.ax.tick_params(labelsize=16)
     # Zoom to layer
     bbox = gdf.total_bounds
     ax.set_xlim(bbox[0], bbox[2])
@@ -118,3 +121,5 @@ def plot_ratio_map(gdf, base_gdf, ax, ratio_col='ratio', cmap_name='Reds', n_tic
     ax.set_title(title)
     ax.set_axis_off()
     plt.tight_layout()
+    
+    

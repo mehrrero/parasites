@@ -24,8 +24,9 @@ rental_houses = [  'Entire rental unit',
             'Entire hostel']
 
 if __name__ == "__main__":
-    
-    parcels = gpd.read_file('data/buildings.geojson')
+    query = ATOM_Query('Barcelona', 'Barcelona')
+    parcels = query.download_gml()
+    parcels.to_crs(boundary.crs, inplace=True)
     bcn = pd.read_csv("data/barcelona.csv")
     bcn['geometry'] = gpd.points_from_xy(bcn['longitude'], bcn['latitude'])
     bcn = gpd.GeoDataFrame(bcn, geometry='geometry', crs="EPSG:4326")
@@ -49,7 +50,7 @@ if __name__ == "__main__":
     G = ox.graph_from_place(place, network_type="drive")
     edges = ox.graph_to_gdfs(G, nodes=False)
     
-    censal = count_houses(parcels, censal, out_label = 'n_parcels', parcel_id_col ='parcel_id', apartments_col  = 'numberOfBuildingUnits')
+    censal = count_houses(parcels, censal, out_label = 'n_parcels', parcel_id_col ='parcel_id', apartments_col  = 'numberOfDwellings')
     censal = count_houses(flats, censal, out_label = 'n_flats', parcel_id_col ='id', apartments_col  = None)
     censal = count_houses(rooms, censal, out_label = 'n_rooms', parcel_id_col ='id', apartments_col  = None)
     censal['ratio_flats'] = 100*censal['n_flats'] / censal['n_parcels']
