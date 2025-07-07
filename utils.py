@@ -60,7 +60,7 @@ def count_houses(parcels: gpd.GeoDataFrame,
 
 
 
-def plot_ratio_map(gdf, base_gdf, ratio_col='ratio', cmap_name='Reds', n_ticks=6, title="Ratio of Airbnb Flats to Parcels per Censal Section"):
+def plot_ratio_map(gdf, base_gdf, ax, ratio_col='ratio', cmap_name='Reds', n_ticks=6, title="Ratio of Airbnb Flats to Parcels per Censal Section"):
     """
     Plots a choropleth map showing the ratio column from `gdf` over a base layer `base_gdf`.
 
@@ -90,7 +90,7 @@ def plot_ratio_map(gdf, base_gdf, ratio_col='ratio', cmap_name='Reds', n_ticks=6
     sm.set_array([])
 
     # Base layer
-    ax = base_gdf.plot(color='lightgrey', figsize=(10, 10))
+    base_gdf.plot(ax = ax, color='lightgrey', figsize=(10, 10))
 
     # Foreground: colored polygons
     gdf.plot(
@@ -107,7 +107,7 @@ def plot_ratio_map(gdf, base_gdf, ratio_col='ratio', cmap_name='Reds', n_ticks=6
     cbar = plt.colorbar(sm, ax=ax, fraction=0.03, pad=0.04)
     cbar.set_label("Ratio (%)")
     cbar.set_ticks(ticks)
-    cbar.set_ticklabels([f"{tick * 100:.1f}%" for tick in ticks])
+    cbar.set_ticklabels([f"{tick :.1f}%" for tick in ticks])
 
     # Zoom to layer
     bbox = gdf.total_bounds
@@ -118,4 +118,3 @@ def plot_ratio_map(gdf, base_gdf, ratio_col='ratio', cmap_name='Reds', n_ticks=6
     ax.set_title(title)
     ax.set_axis_off()
     plt.tight_layout()
-    plt.show()
