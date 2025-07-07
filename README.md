@@ -6,7 +6,7 @@ The idea for this analysis was brought to me after this reading this [news piece
 
 > En Barcelona, Ciutat Vella y el Eixample son las zonas con más peso de la vivienda turística: 2,8% y 2,9%, respectivamente. El Eixample, más extenso, suma unos 4.000 alojamientos, cuatro veces más que Ciutat Vella.
 
-This is clear contrast to the everyday feeling that any person residing in Barcelona can have. Hence, I decided to take a look at a different source of data, provided by the [Spanish Cadastre](https://www.catastro.hacienda.gob.es/webinspire/index.html) in combination with a well known scrapper of [Airbnb data](https://insideairbnb.com/get-the-data/).
+This is clear contrast to the everyday feeling that any person residing in Barcelona can have. Hence, I decided to take a look at a different source of data, provided by the [Spanish Cadastre](https://www.catastro.hacienda.gob.es/webinspire/index.html) in combination with a well known scrapper of [Airbnb data](https://insideairbnb.com/get-the-data/). My results indeed indicate that there are parts of the city where the percentage of apartments fully dedicated to airbnb is close to 20%, while this number escalates to 30% if we include those that are rented by rooms.
 
 ## How to reproduce these results
 
