@@ -4,6 +4,24 @@ from shapely.geometry import Point
 from utils import count_houses, plot_ratio_map
 import osmnx as ox
 
+rental_houses = [  'Entire rental unit', 
+            'Entire condo',
+            'Entire vacation home',
+            'Entire serviced apartment', 
+            'Entire home', 
+            'Entire loft',
+            'Entire townhouse', 
+            'Entire guest suite',
+            'Entire villa',
+            'Tiny home', 
+            'Entire guesthouse', 
+            'Entire cabin', 
+            'Entire place', 
+            'Entire chalet', 
+            'Casa particular', 
+            'Dome', 
+            'Yurt', 
+            'Entire hostel']
 
 if __name__ == "__main__":
     
@@ -11,7 +29,7 @@ if __name__ == "__main__":
     bcn = pd.read_csv("data/barcelona.csv")
     bcn['geometry'] = gpd.points_from_xy(bcn['longitude'], bcn['latitude'])
     bcn = gpd.GeoDataFrame(bcn, geometry='geometry', crs="EPSG:4326")
-    bcn['property_type_basic'] = bcn['property_type'].apply(lambda x: 'Flat' if 'entire' in str(x).lower() else 'Room')
+    bcn['property_type_basic'] = bcn['property_type'].apply(lambda x: 'Flat' if x in rental_houses else 'Room')
     flats = bcn[bcn['property_type_basic'] == 'Flat']
     rooms = bcn[bcn['property_type_basic'] == 'Room']
     ad_boundaries = gpd.read_file('data/0301100100_UNITATS_ADM_POLIGONS.json')
