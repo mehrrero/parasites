@@ -1,6 +1,6 @@
 # Parasites: A visualization of the touristic Airbnb invasion in Barcelona
 
-This repository contains the data for the streamlit app hosted [here](http://parasites.streamlit.io).
+This repository contains the data for the streamlit app hosted [here](https://parasites.streamlit.app/).
 
 The idea for this analysis was brought to me after this reading this [news piece from El País](https://elpais.com/economia/2025-07-02/donde-estan-los-casi-400000-pisos-turisticos-de-espana-el-mapa-calle-a-calle.html). Here, they report, by using public data released by the [Spanish Institute of Statistics](https://www.ine.es/),  surprisingly low numbers of touristic appartments and housing in Barcelona. In particular, they claim that the largest values they find don't even reach 3% of occupation.
 
