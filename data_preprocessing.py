@@ -4,6 +4,7 @@ from shapely.geometry import Point
 from utils import count_houses, plot_ratio_map
 import osmnx as ox
 from catastro.atom import ATOM_Query
+import os
 
 rental_houses = [  'Entire rental unit', 
             'Entire condo',
@@ -28,7 +29,11 @@ if __name__ == "__main__":
     query = ATOM_Query('Barcelona', 'Barcelona')
     parcels = query.download_gml()
     parcels.to_crs("EPSG:4326", inplace=True)
-    bcn = pd.read_csv("data/barcelona.csv")
+    
+    if not os.path.exists("data/barcelona.csv"):
+        raise FileNotFoundError("The file 'data/barcelona.csv' does not exist. Please download it from Inside Airbnb and place it in the 'data' directory.")
+        
+    bcn = pd.read_csv("data/barcelona.csv") #This needs to be downloaded from Inside Airbnb
     bcn['geometry'] = gpd.points_from_xy(bcn['longitude'], bcn['latitude'])
     bcn = gpd.GeoDataFrame(bcn, geometry='geometry', crs="EPSG:4326")
     bcn['property_type_basic'] = bcn['property_type'].apply(lambda x: 'Flat' if x in rental_houses else 'Room')
