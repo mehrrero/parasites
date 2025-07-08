@@ -105,7 +105,7 @@ def plot_ratio_map(gdf, base_gdf, ax, ratio_col='ratio', cmap_name='Reds', n_tic
 
     # Custom colorbar
     cbar = plt.colorbar(sm, ax=ax, fraction=0.03, pad=0.04)
-    cbar.set_label("Ratio (%)")
+    cbar.set_label("Percentage (%)")
     cbar.set_ticks(ticks)
     cbar.set_ticklabels([f"{tick :.0f}%" for tick in ticks])
 
