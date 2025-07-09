@@ -3,7 +3,7 @@ import geopandas as gpd
 import folium
 from streamlit_folium import folium_static
 import numpy as np
-from utils import count_houses, plot_ratio_map
+from utils.utils import count_houses, plot_ratio_map
 import matplotlib.pyplot as plt
 
 

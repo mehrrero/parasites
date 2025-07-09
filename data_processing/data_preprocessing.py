@@ -1,29 +1,77 @@
 import geopandas as gpd
 import pandas as pd
 from shapely.geometry import Point
-from utils import count_houses, plot_ratio_map
+from utils.utils import count_houses, plot_ratio_map
 import osmnx as ox
 from catastro.atom import ATOM_Query
 import os
+import json
+import requests
+import gzip
+import shutil
 
-rental_houses = [  'Entire rental unit', 
-            'Entire condo',
-            'Entire vacation home',
-            'Entire serviced apartment', 
-            'Entire home', 
-            'Entire loft',
-            'Entire townhouse', 
-            'Entire guest suite',
-            'Entire villa',
-            'Tiny home', 
-            'Entire guesthouse', 
-            'Entire cabin', 
-            'Entire place', 
-            'Entire chalet', 
-            'Casa particular', 
-            'Dome', 
-            'Yurt', 
-            'Entire hostel']
+# Load rental houses categories from JSON file
+with open('data/houses_categories.json', 'r') as f_read:
+    rental_houses = json.load(f_read)
+
+def format_location_path(location_str):
+    parts = location_str.lower().replace(" ", "").split(",")
+    return "/".join(reversed(parts))
+
+class city:
+    def __init__(self, name, province, insideabnb_handle):
+        self.name = name
+        self.province = province
+        self.insideabnb_handle = insideabnb_handle
+
+
+    def get_parcels(self):
+        query = ATOM_Query(self.name, self.province)
+        parcels = query.download_gml()
+        parcels.to_crs("EPSG:4326", inplace=True)
+        self.parcels = parcels
+        print(f"Downloaded parcels for {self.name} in {self.province}.")
+        
+    def get_airbnb_data(self):
+        baseurl = "https://data.insideairbnb.com/"
+        # Format the URL based on the insideabnb_handle
+        url = baseurl + format_location_path(self.insideabnb_handle) + "/data/listings.csv.gz"
+        compressed_path = f"data/{self.name}/listings.csv.gz"
+        decompressed_path = f"data/{self.name}/listings.csv"
+
+        os.makedirs("data", exist_ok=True)
+
+        # Check if decompressed file already exists
+        if os.path.exists(decompressed_path):
+            print(f"Using cached Airbnb data from {decompressed_path}")
+        else:
+            # Check if compressed file exists
+            if not os.path.exists(compressed_path):
+                print("Downloading Airbnb data...")
+                response = requests.get(url, stream=True)
+                response.raise_for_status()
+                with open(compressed_path, "wb") as f:
+                    for chunk in response.iter_content(chunk_size=8192):
+                        f.write(chunk)
+            else:
+                print(f"Using cached compressed file at {compressed_path}")
+
+            # Decompress the file
+            print("Decompressing data...")
+            with gzip.open(compressed_path, "rb") as f_in:
+                with open(decompressed_path, "wb") as f_out:
+                    shutil.copyfileobj(f_in, f_out)
+            print(f"Decompressed Airbnb data to {decompressed_path}")
+
+        # Load the CSV into a DataFrame
+        self.listings = pd.read_csv(decompressed_path)
+
+
+
+
+
+
+
 
 if __name__ == "__main__":
     query = ATOM_Query('Barcelona', 'Barcelona')

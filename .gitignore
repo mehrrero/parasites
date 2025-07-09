@@ -207,3 +207,4 @@ marimo/_lsp/
 __marimo__/
 cache
 inspire_data
+.DS_Store
