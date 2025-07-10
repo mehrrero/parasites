@@ -7,27 +7,20 @@ import numpy as np
 
 
 def count_houses(parcels: gpd.GeoDataFrame, 
-                                 censal: gpd.GeoDataFrame,
-                                 out_label: str , 
-                                 parcel_id_col: str = 'parcel_id', 
-                                 apartments_col: str = None) -> gpd.GeoDataFrame:
+                 censal: gpd.GeoDataFrame,
+                 out_label: str , 
+                 apartments_col: str = None) -> gpd.GeoDataFrame:
     """
     Counts total number of apartments (or parcels, if apartments_col is None)
     intersecting each censal section.
-
-    Parameters:
-    - parcels: GeoDataFrame with parcel geometries.
-    - censal: GeoDataFrame with censal section geometries.
-    - parcel_id_col: Column name to use as a unique parcel ID (defaults to 'parcel_id').
-    - apartments_col: Column with apartment counts per parcel. If None, each parcel counts as 1 apartment.
-
-    Returns:
-    - censal GeoDataFrame with added 'n_apartments' column.
     """
     
+    # Avoid SettingWithCopyWarning by working on a copy
+    parcels = parcels.copy()
+    
     # Add a unique ID if not present
-    if parcel_id_col not in parcels.columns:
-        parcels[parcel_id_col] = parcels.index
+    if "id" not in parcels.columns:
+        parcels["id"] = parcels.index
 
     # If no apartments_col is given, create a temporary one with all 1s
     temp_col = False
@@ -36,14 +29,13 @@ def count_houses(parcels: gpd.GeoDataFrame,
         parcels[apartments_col] = 1
         temp_col = True
     else:
-        # Ensure apartment counts are numeric
         parcels[apartments_col] = pd.to_numeric(parcels[apartments_col], errors='coerce').fillna(0)
 
     # Perform spatial join
     joined = gpd.sjoin(parcels, censal, how='inner', predicate='intersects')
 
     # Drop duplicates to ensure each parcel is counted once
-    joined_unique = joined.drop_duplicates(subset=parcel_id_col)
+    joined_unique = joined.drop_duplicates(subset="id")
 
     # Sum apartments per censal section
     apartments_per_censal = joined_unique.groupby('index_right')[apartments_col].sum()
@@ -57,6 +49,7 @@ def count_houses(parcels: gpd.GeoDataFrame,
         parcels.drop(columns=[apartments_col], inplace=True)
 
     return censal
+
 
 
 
