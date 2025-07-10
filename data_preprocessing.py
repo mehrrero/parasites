@@ -9,8 +9,6 @@ import gzip
 import shutil
 
 
-
-
 # Load rental houses categories from JSON file
 with open('data/houses_categories.json', 'r') as f_read:
     rental_houses = json.load(f_read)
@@ -141,6 +139,7 @@ def compute_city(city_name, insideabnb_handle, date, save_path):
 if __name__ == "__main__":
     
    cities = pd.read_json('data/cities.json', lines=True)
+
    
    for _, row in cities.iterrows():
         city_name = row['city']
