@@ -12,6 +12,8 @@ import shutil
 import zipfile
 import io
 
+
+
 # Load rental houses categories from JSON file
 with open('data/houses_categories.json', 'r') as f_read:
     rental_houses = json.load(f_read)
@@ -160,9 +162,37 @@ class city:
 ##################################
 ##################################
 
+def compute_city(city_name, province, insideabnb_handle, date, save_path=None):
+    """
+    Computes the Airbnb data and ratios for a given city.
+    
+    Parameters:
+    - city_name: Name of the city.
+    - province: Province of the city.
+    - insideabnb_handle: Inside Airbnb handle for the city.
+    - date: Date of the data to be used.
+    - save_path: Optional path to save the results as GeoJSON.
+    
+    Returns:
+    - A city instance with computed results.
+    """
+    c = city(city_name, province, insideabnb_handle, date)
+    c.get_results(save_path)
+
+
+
 
 if __name__ == "__main__":
-    # Create a city instance for Barcelona
-    bcn = city("barcelona","Barcelona","Barcelona, Catalonia, Spain", "2025-06-12")
-    bcn.get_results('data/results/barcelona.geojson')
+    
+   cities = pd.read_json('data/cities.json', orient='records', lines=True)
+   
+   for _, row in cities.iterrows():
+        city_name = row['city']
+        province = row['province']
+        insideabnb_handle = row['insideabnb_handle']
+        date = row['dates']
+       
+        print(f"Processing {city_name}...")
+        compute_city(city_name, province, insideabnb_handle, date, save_path=f"data/results/{city_name}.geojson")
+        print(f"Finished processing {city_name}.")
     
