@@ -1,16 +1,13 @@
 import geopandas as gpd
 import pandas as pd
-from shapely.geometry import Point
-from utils.utils import count_houses, plot_ratio_map
+from utils.utils import plot_ratio_map, censal_from_gdf
 import osmnx as ox
-from catastro.atom import ATOM_Query
 import os
 import json
 import requests
 import gzip
 import shutil
-import zipfile
-import io
+
 
 
 
@@ -22,26 +19,22 @@ def format_location_path(location_str):
     parts = location_str.lower().replace(" ", "").split(",")
     return "/".join(reversed(parts))
 
+
 class city:
-    def __init__(self, name, province, insideabnb_handle, date):
+    def __init__(self, name, insideabnb_handle, date):
         self.name = name
-        self.province = province
         self.insideabnb_handle = insideabnb_handle
         self.date = date
-
-
-    def get_parcels(self):
-        query = ATOM_Query(self.name, self.province)
-        parcels = query.download_gml()
-        parcels.to_crs("EPSG:4326", inplace=True)
-        parcels.rename(columns={
-            'parcel_id': 'id',
-        }, inplace=True)
-        self.parcels = parcels
-        print(f"Downloaded parcels for {self.name} in {self.province}.")
         
-    def get_airbnb_data(self):
-        baseurl = "https://data.insideairbnb.com/"
+        self.listings = None
+        self.censal = None
+
+        
+        
+###############################################
+        
+    def get_data(self):
+        baseurl = "https://data.insideairbnb.com/spain/"
         # Format the URL based on the insideabnb_handle
         url = baseurl + format_location_path(self.insideabnb_handle) + "/" + self.date +"/data/listings.csv.gz"
         compressed_path = f"data/cache/{self.name}/listings.csv.gz"
@@ -71,7 +64,7 @@ class city:
                     shutil.copyfileobj(f_in, f_out)
             print(f"Decompressed Airbnb data to {decompressed_path}")
 
-        # Load the CSV into a DataFrame
+        
         listings = pd.read_csv(decompressed_path)
         listings['geometry'] = gpd.points_from_xy(listings['longitude'], listings['latitude'])
         listings = gpd.GeoDataFrame(listings, geometry='geometry', crs="EPSG:4326")
@@ -79,90 +72,57 @@ class city:
         self.listings = listings
         self.flats = listings[listings['property_type_basic'] == 'Flat']
         self.rooms = listings[listings['property_type_basic'] == 'Room']
+        self.censal = censal_from_gdf(self.listings, target_wkid=102100)
 
-    def get_censal_sections(self):
-        url = "https://www.ine.es/prodyser/cartografia/seccionado_2025.zip"
-        shp_dir = "data/cache/seccionado_2025"
+
+################################################
+
+    def count_houses(self, gdf, out_label):
         
-        if any(fname.endswith('.shp') for fname in os.listdir(shp_dir + "/España_Seccionado2025_ETRS89H30")) if os.path.exists(shp_dir) else False:
-            print("Shapefile already exists in data/seccionado_2025, skipping download.")
-            
-        else: 
-            print("Downloading censal sections data...")
-            os.makedirs(shp_dir, exist_ok=True)
-            response = requests.get(url)
-            with zipfile.ZipFile(io.BytesIO(response.content)) as z:
-                z.extractall("data/cache/seccionado_2025")
-                
-        censal = gpd.read_file('data/cache/seccionado_2025/España_Seccionado2025_ETRS89H30/SECC_CE_20250101.shp').to_crs('EPSG:4326')
-        censal = censal[censal['NMUN'] == self.name.capitalize()]
-        self.censal_sections = censal
+        # Spatial join: count listings within each censal geometry
+        counts = gpd.sjoin(gdf, self.censal, how='left', predicate='within').groupby('index_right').size()
 
+        # Assign counts to censal GeoDataFrame
+        self.censal[out_label] = self.censal.index.map(counts).fillna(0).astype(int)
+    
 
-    def count_houses(self, gdf, out_label, apartments_col=None):
-        """
-        Counts total number of apartments (or parcels, if apartments_col is None)
-        intersecting each censal section.
-
-        Parameters:
-        - gdf: GeoDataFrame with geometries.
-        - out_label: Column name to store the count result.
-        - parcel_id_col: Column name to use as a unique parcel ID (defaults to 'parcel_id').
-        - apartments_col: Column with apartment counts per parcel. If None, each parcel counts as 1 apartment.
-
-        Returns:
-        - GeoDataFrame with added out_label column.
-        """
-        return count_houses(gdf, self.censal_sections, out_label, apartments_col)[['geometry', out_label]]
+ #############################################   
+    
     
     def compute_ratios(self):
         """
         Computes the ratio of flats and rooms to parcels in the censal sections.
         """
-        out_b = self.count_houses(self.parcels, out_label='n_parcels', apartments_col='numberOfDwellings')
-        out_f = self.count_houses(self.flats, out_label='n_flats', apartments_col=None)
-        out_r = self.count_houses(self.rooms, out_label='n_rooms', apartments_col=None)
-
-        # Merge results
-        out = out_b.merge(out_f, on='geometry', how='outer')
-        out = out.merge(out_r, on='geometry', how='outer')
-        out['n_all'] = out['n_rooms'] + out['n_flats']
-        out = out[out['n_parcels'] > 0]
-
+        
+        self.count_houses(self.flats, out_label='n_flats')
+        self.count_houses(self.rooms, out_label='n_rooms')
+        
+        self.censal['n_all'] = self.censal['n_rooms'] + self.censal['n_flats']
+        self.censal = self.censal[self.censal['viviendas'] > 0]
+    
         # Calculate ratios
-        out['ratio_flats'] = 100 * out['n_flats'] / out['n_parcels']
-        out['ratio_rooms'] = 100 * out['n_rooms'] / out['n_parcels']
-        out['ratio'] = 100 * (out['n_flats'] + out['n_rooms']) / out['n_parcels']
+        self.censal['ratio_flats'] = 100 * self.censal['n_flats'] / self.censal['viviendas']
+        self.censal['ratio_rooms'] = 100 * self.censal['n_rooms'] / self.censal['viviendas']
+        self.censal['ratio'] =  self.censal['ratio_flats']+ self.censal['ratio_rooms']
 
-        self.results = out
-
+###############################################
 
     def get_results(self, save_path=None):
-        self.get_parcels()
-        self.get_airbnb_data()
-        self.get_censal_sections()
+        self.get_data()
         self.compute_ratios()
         if save_path:
             os.makedirs(os.path.dirname(save_path), exist_ok=True)
-            self.results.to_file(save_path, driver='GeoJSON')
+            tosave = self.censal.copy()
+            tosave = tosave[['geometry', 'viviendas', 'n_flats', 'n_rooms', 'n_all', 'ratio_flats', 'ratio_rooms', 'ratio']]
+            tosave.to_file(save_path, driver='GeoJSON')
         print("Computed ratios for flats and rooms in the city.")
         
-    def get_edges(self, save_path=None):
-        """
-        Downloads the street network for the city and saves it as a GeoJSON file.
-        """
-        bbox = self.results.total_bounds
-        G = ox.graph_from_bbox(bbox, network_type="walk", simplify=True, retain_all=True, truncate_by_edge=False)
-        self.edges = ox.graph_to_gdfs(G, nodes=False)
-        print(f"Downloaded street network for {self.name}.")
-        if save_path:
-            os.makedirs(os.path.dirname(save_path), exist_ok=True)
-            self.edges.to_file(save_path, driver='GeoJSON')
+    
        
 ##################################
 ##################################
 
-def compute_city(city_name, province, insideabnb_handle, date, save_path=None):
+def compute_city(city_name, insideabnb_handle, date, save_path):
     """
     Computes the Airbnb data and ratios for a given city.
     
@@ -173,26 +133,20 @@ def compute_city(city_name, province, insideabnb_handle, date, save_path=None):
     - date: Date of the data to be used.
     - save_path: Optional path to save the results as GeoJSON.
     
-    Returns:
-    - A city instance with computed results.
     """
-    c = city(city_name, province, insideabnb_handle, date)
+    c = city(city_name, insideabnb_handle, date)
     c.get_results(save_path)
-
-
 
 
 if __name__ == "__main__":
     
-   cities = pd.read_json('data/cities.json', orient='records', lines=True)
+   cities = pd.read_json('data/cities.json', lines=True)
    
    for _, row in cities.iterrows():
         city_name = row['city']
-        province = row['province']
         insideabnb_handle = row['insideabnb_handle']
         date = row['dates']
        
         print(f"Processing {city_name}...")
-        compute_city(city_name, province, insideabnb_handle, date, save_path=f"data/results/{city_name}.geojson")
+        compute_city(city_name, insideabnb_handle, date, save_path=f"data/results/{city_name}.geojson")
         print(f"Finished processing {city_name}.")
-    

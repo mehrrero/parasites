@@ -3,54 +3,10 @@ import geopandas as gpd
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 import numpy as np
-
-
-
-def count_houses(parcels: gpd.GeoDataFrame, 
-                 censal: gpd.GeoDataFrame,
-                 out_label: str , 
-                 apartments_col: str = None) -> gpd.GeoDataFrame:
-    """
-    Counts total number of apartments (or parcels, if apartments_col is None)
-    intersecting each censal section.
-    """
-    
-    # Avoid SettingWithCopyWarning by working on a copy
-    parcels = parcels.copy()
-    
-    # Add a unique ID if not present
-    if "id" not in parcels.columns:
-        parcels["id"] = parcels.index
-
-    # If no apartments_col is given, create a temporary one with all 1s
-    temp_col = False
-    if apartments_col is None:
-        apartments_col = '_tmp_apartment_count'
-        parcels[apartments_col] = 1
-        temp_col = True
-    else:
-        parcels[apartments_col] = pd.to_numeric(parcels[apartments_col], errors='coerce').fillna(0)
-
-    # Perform spatial join
-    joined = gpd.sjoin(parcels, censal, how='inner', predicate='intersects')
-
-    # Drop duplicates to ensure each parcel is counted once
-    joined_unique = joined.drop_duplicates(subset="id")
-
-    # Sum apartments per censal section
-    apartments_per_censal = joined_unique.groupby('index_right')[apartments_col].sum()
-
-    # Add result to censal GeoDataFrame
-    censal = censal.copy()
-    censal[out_label] = censal.index.map(apartments_per_censal).fillna(0).astype(int)
-
-    # Clean up temporary column if created
-    if temp_col:
-        parcels.drop(columns=[apartments_col], inplace=True)
-
-    return censal
-
-
+import requests
+import json
+import geopandas as gpd
+from shapely.geometry import Polygon, Point
 
 
 def plot_ratio_map(gdf, base_gdf, ax, ratio_col='ratio', cmap_name='Reds', n_ticks=6, title="Ratio of Airbnb Flats to Parcels per Censal Section"):
@@ -116,3 +72,71 @@ def plot_ratio_map(gdf, base_gdf, ax, ratio_col='ratio', cmap_name='Reds', n_tic
     plt.tight_layout()
     
     
+
+
+def censal_from_gdf(input_gdf, target_wkid=102100):
+    """
+    Query the FeatureServer using the bounding box of a GeoDataFrame.
+    
+    Parameters:
+    - input_gdf: GeoDataFrame with any CRS
+    - target_wkid: spatial reference WKID for the query (default 102100 Web Mercator)
+    
+    Returns:
+    - GeoDataFrame with queried features in the target CRS
+    """
+    # Reproject input_gdf to target CRS if necessary
+    if input_gdf.crs != f"EPSG:{target_wkid}":
+        gdf_proj = input_gdf.to_crs(epsg=target_wkid)
+    else:
+        gdf_proj = input_gdf
+    
+    # Extract bounding box from reprojected GeoDataFrame
+    bounds = gdf_proj.total_bounds  # (xmin, ymin, xmax, ymax)
+    xmin, ymin, xmax, ymax = bounds
+    
+    base_url = "https://www.ine.es/servergis/rest/services/Hosted/SAS_seleccion_2021/FeatureServer/6/query"
+    
+    geometry = {
+        "xmin": xmin,
+        "ymin": ymin,
+        "xmax": xmax,
+        "ymax": ymax,
+        "spatialReference": {"wkid": target_wkid}
+    }
+    
+    params = {
+        "f": "json",
+        "returnGeometry": "true",
+        "spatialRel": "esriSpatialRelIntersects",
+        "geometry": json.dumps(geometry),
+        "geometryType": "esriGeometryEnvelope",
+        "inSR": target_wkid,
+        "outFields": "*",
+        "outSR": target_wkid
+    }
+    
+    response = requests.get(base_url, params=params)
+    if response.status_code != 200:
+        raise Exception(f"Request failed with status code {response.status_code}")
+    
+    data = response.json()
+    
+    records = []
+    for feature in data.get("features", []):
+        attr = feature.get("attributes", {})
+        geom = feature.get("geometry", {})
+
+        # Convert ESRI JSON geometry to shapely geometry
+        if "rings" in geom:  # Polygon
+            polygon = Polygon(geom["rings"][0], geom["rings"][1:] if len(geom["rings"]) > 1 else [])
+            shapely_geom = polygon
+        elif "x" in geom and "y" in geom:  # Point
+            shapely_geom = Point(geom["x"], geom["y"])
+        else:
+            shapely_geom = None
+        
+        records.append({**attr, "geometry": shapely_geom})
+    
+    result_gdf = gpd.GeoDataFrame(records, geometry="geometry", crs=f"EPSG:{target_wkid}")
+    return result_gdf.to_crs(input_gdf.crs)

@@ -1,9 +1,8 @@
-{"city":"barcelona","province":"Barcelona","insideabnb_handle":"Barcelona, Catalonia, Spain","dates":"2025-06-12"}
-{"city":"euskadi","province":"Pais Vasco","insideabnb_handle":"Euskadi, Euskadi, Spain","dates":"2025-03-27"}
-{"city":"girona","province":"Girona","insideabnb_handle":"Girona, Catalonia, Spain","dates":"2025-03-27"}
-{"city":"madrid","province":"Madrid","insideabnb_handle":"Madrid, Comunidad de Madrid, Spain","dates":"2025-06-12"}
-{"city":"malaga","province":"Malaga","insideabnb_handle":"Malaga, Andaluc\u00eda, Spain","dates":"2025-03-28"}
-{"city":"mallorca","province":"Islas Baleares","insideabnb_handle":"Mallorca, Islas Baleares, Spain","dates":"2025-06-15"}
-{"city":"menorca","province":"Islas Baleares","insideabnb_handle":"Menorca, Islas Baleares, Spain","dates":"2025-06-29"}
-{"city":"sevilla","province":"Sevilla","insideabnb_handle":"Sevilla, Andaluc\u00eda, Spain","dates":"2025-03-26"}
-{"city":"valencia","province":"Valencia","insideabnb_handle":"Valencia, Valencia, Spain","dates":"2025-06-20"}
+{"city":"barcelona","insideabnb_handle":"catalonia\/barcelona","dates":"2025-06-12"}
+{"city":"girona","insideabnb_handle":"catalonia\/girona","dates":"2025-03-27"}
+{"city":"madrid","insideabnb_handle":"comunidad-de-madrid\/madrid","dates":"2025-06-12"}
+{"city":"malaga","insideabnb_handle":"andaluc\u00eda\/malaga","dates":"2025-03-28"}
+{"city":"mallorca","insideabnb_handle":"islas-baleares\/mallorca","dates":"2025-06-15"}
+{"city":"menorca","insideabnb_handle":"islas-baleares\/menorca","dates":"2025-06-29"}
+{"city":"sevilla","insideabnb_handle":"andaluc\u00eda\/sevilla","dates":"2025-03-26"}
+{"city":"valencia","insideabnb_handle":"vc\/valencia","dates":"2025-06-20"}
