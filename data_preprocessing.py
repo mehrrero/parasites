@@ -1,6 +1,6 @@
 import geopandas as gpd
 import pandas as pd
-from utils.utils import plot_ratio_map, censal_from_gdf
+from utils.utils import plot_ratio_map, censal_from_gdf, serpavi_from_gdf
 import osmnx as ox
 import os
 import json
@@ -71,6 +71,13 @@ class city:
         self.flats = listings[listings['property_type_basic'] == 'Flat']
         self.rooms = listings[listings['property_type_basic'] == 'Room']
         self.censal = censal_from_gdf(self.listings, target_wkid=102100)
+        self.servapi = serpavi_from_gdf(self.listings)[['Cuantía_m', 'Cuantia_me', 'Cuantia__1', 'CSEC', 'geometry']]
+        self.servapi = self.servapi.rename(columns={
+            'Cuantía_m': 'Mediana',
+            'Cuantia_me': 'p25',
+            'Cuantia__1': 'p75',
+            'CSEC': 'csec',
+        })
 
 
 ################################################

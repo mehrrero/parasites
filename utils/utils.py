@@ -6,7 +6,8 @@ import numpy as np
 import requests
 import json
 import geopandas as gpd
-from shapely.geometry import Polygon, Point
+from shapely.geometry import Polygon, Point, MultiPolygon
+from pyproj import Transformer
 
 
 def plot_ratio_map(gdf, base_gdf, ax, ratio_col='ratio', cmap_name='Reds', n_ticks=6, title="Ratio of Airbnb Flats to Parcels per Censal Section"):
@@ -140,3 +141,79 @@ def censal_from_gdf(input_gdf, target_wkid=102100):
     
     result_gdf = gpd.GeoDataFrame(records, geometry="geometry", crs=f"EPSG:{target_wkid}")
     return result_gdf.to_crs(input_gdf.crs)
+
+
+
+def serpavi_from_gdf(gdf_input):
+    """
+    Download features from SERPAVI layer intersecting the bbox of the input GeoDataFrame.
+    Returns a GeoDataFrame in EPSG:25830.
+    
+    Parameters:
+        gdf_input (GeoDataFrame): Input GeoDataFrame, any CRS.
+        
+    Returns:
+        GeoDataFrame with all features inside input bbox, in EPSG:25830.
+    """
+    # Ensure input bbox is in EPSG:4326 for transforming
+    gdf_wgs84 = gdf_input.to_crs("EPSG:4326")
+    bounds = gdf_wgs84.total_bounds  # (xmin, ymin, xmax, ymax)
+
+    # Transform bbox to EPSG:25830
+    transformer = Transformer.from_crs("EPSG:4326", "EPSG:25830", always_xy=True)
+    xmin_25830, ymin_25830 = transformer.transform(bounds[0], bounds[1])
+    xmax_25830, ymax_25830 = transformer.transform(bounds[2], bounds[3])
+
+    url = "https://services1.arcgis.com/nCKYwcSONQTkPA4K/ArcGIS/rest/services/Sistema_Estatal_de_Referencia_del_Precio_del_Alquiler_de_Vivienda_Solo_lectura/FeatureServer/0/query"
+
+    base_params = {
+        "f": "json",
+        "returnGeometry": "true",
+        "outFields": "*",
+        "outSR": 25830,
+        "geometry": f"{xmin_25830},{ymin_25830},{xmax_25830},{ymax_25830}",
+        "geometryType": "esriGeometryEnvelope",
+        "spatialRel": "esriSpatialRelIntersects",
+        "where": "1=1",
+        "resultRecordCount": 2000,
+    }
+
+    all_rows = []
+    offset = 0
+
+    while True:
+        params = base_params.copy()
+        params["resultOffset"] = offset
+
+        response = requests.get(url, params=params)
+        response.raise_for_status()
+        data = response.json()
+
+        features = data.get("features", [])
+        if not features:
+            break
+
+        for feature in features:
+            geom = feature.get("geometry")
+            if not geom:
+                continue
+
+            rings = geom.get("rings")
+            if not rings:
+                continue
+
+            if len(rings) == 1:
+                polygon = Polygon(shell=rings[0])
+            else:
+                polys = [Polygon(shell=ring) for ring in rings]
+                polygon = MultiPolygon(polys)
+
+            props = feature.get("attributes", {})
+            all_rows.append({**props, "geometry": polygon})
+
+        offset += len(features)
+
+    result_gdf = gpd.GeoDataFrame(all_rows, crs="EPSG:25830")
+    return result_gdf
+
+
