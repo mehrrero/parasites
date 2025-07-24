@@ -139,7 +139,7 @@ class city:
         if save_path:
             os.makedirs(os.path.dirname(save_path), exist_ok=True)
             tosave = out
-            tosave = tosave[['geometry', 'viviendas', 'n_flats', 'n_rooms', 'n_all', 'ratio_flats', 'ratio_rooms', 'ratio', 'mean_price', 'Mediana', 'p25', 'p75', 'profit', 'net_profit']]
+            tosave = tosave[['geometry', 'viviendas', 'n_flats', 'n_rooms', 'n_all', 'ratio_flats', 'ratio_rooms', 'ratio', 'mean_price', 'mean_revenue', 'profit', 'net_profit']]
             tosave.to_file(save_path, driver='GeoJSON')
         print("Computed ratios for flats and rooms in the city.")
         
