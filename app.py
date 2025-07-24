@@ -36,6 +36,7 @@ gdf =gpd.read_file(f'data/results/{city.lower()}.geojson')
 gdf = gdf.reset_index(drop=True)
 gdf.index.name = 'id'  # Choropleth will use this as feature.id
 gdf[col] = gdf[col].astype(float).round(1) # Ensure the column is float and rounded to 1 decimal place
+gdf['Mediana'] = gdf['Mediana'].astype(float).round(0)  # Ensure Mediana is float and rounded to 1 decimal place
 
 location = gdf.iloc[gdf['ratio'].idxmax()].geometry.centroid
 
@@ -62,7 +63,7 @@ folium.Choropleth(
 
 folium.GeoJson(
     gdf,
-    tooltip=folium.GeoJsonTooltip(fields=[col], aliases=["%:"]),
+    tooltip=folium.GeoJsonTooltip(fields=[col, 'Mediana'], aliases=["%:", "Mediana"]),
     style_function=lambda feature: {
         'fillOpacity': 0,
         'color': 'transparent'

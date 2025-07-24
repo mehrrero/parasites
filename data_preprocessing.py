@@ -7,6 +7,7 @@ import json
 import requests
 import gzip
 import shutil
+import numpy as np
 
 
 # Load rental houses categories from JSON file
@@ -67,17 +68,30 @@ class city:
         listings['geometry'] = gpd.points_from_xy(listings['longitude'], listings['latitude'])
         listings = gpd.GeoDataFrame(listings, geometry='geometry', crs="EPSG:4326")
         listings['property_type_basic'] = listings['property_type'].apply(lambda x: 'Flat' if x in rental_houses else 'Room')
+        listings['price'] = listings['price'].str.replace("$", "").str.replace(",", "").astype(float)
+        listings['monthly_revenue'] = listings['estimated_revenue_l365d'] / 12
         self.listings = listings
         self.flats = listings[listings['property_type_basic'] == 'Flat']
         self.rooms = listings[listings['property_type_basic'] == 'Room']
         self.censal = censal_from_gdf(self.listings, target_wkid=102100)
-        self.servapi = serpavi_from_gdf(self.listings)[['Cuantía_m', 'Cuantia_me', 'Cuantia__1', 'CSEC', 'geometry']]
+        self.servapi = serpavi_from_gdf(self.listings)
+        self.servapi['renta_total_VC'] = self.servapi['Cuantía_m']*self.servapi['Num_VC']
+        self.servapi['renta_total_VU'] = self.servapi['Cuantía_1']*self.servapi['Num_VU']
+        self.servapi = self.servapi[['renta_total_VC', 'renta_total_VU', 'Num_VC', 'Num_VU', 'CSEC', 'geometry']]
         self.servapi = self.servapi.rename(columns={
-            'Cuantía_m': 'Mediana',
-            'Cuantia_me': 'p25',
-            'Cuantia__1': 'p75',
             'CSEC': 'csec',
         })
+        self.servapi = self.servapi.dissolve(by='csec', aggfunc={
+            'renta_total_VC': 'sum',
+            'renta_total_VU': 'sum',
+            'Num_VC': 'sum',
+            'Num_VU': 'sum',
+        }).reset_index()
+
+        self.servapi['renta_media_VC'] = self.servapi['renta_total_VC'] / self.servapi['Num_VC']
+        self.servapi['renta_media_VU'] = self.servapi['renta_total_VU'] / self.servapi['Num_VU']
+        self.servapi['Num_V'] = self.servapi['Num_VC'] + self.servapi['Num_VU']
+        self.servapi['renta_media_V'] = (self.servapi['renta_total_VC'] + self.servapi['renta_total_VU']) / self.servapi['Num_V']
 
 
 ################################################
@@ -89,7 +103,9 @@ class city:
 
         # Assign counts to censal GeoDataFrame
         self.censal[out_label] = self.censal.index.map(counts).fillna(0).astype(int)
-    
+        self.censal['mean_price'] = gpd.sjoin(self.listings, self.censal, how='left', predicate='within').groupby('index_right').agg({'price': 'mean'})
+        self.censal['mean_revenue'] = gpd.sjoin(self.listings, self.censal, how='left', predicate='within').groupby('index_right').agg({'monthly_revenue': 'mean'})
+
 
  #############################################   
     
@@ -109,16 +125,21 @@ class city:
         self.censal['ratio_flats'] = 100 * self.censal['n_flats'] / self.censal['viviendas']
         self.censal['ratio_rooms'] = 100 * self.censal['n_rooms'] / self.censal['viviendas']
         self.censal['ratio'] =  self.censal['ratio_flats']+ self.censal['ratio_rooms']
+        
 
 ###############################################
 
     def get_results(self, save_path=None):
         self.get_data()
         self.compute_ratios()
+            
+        out = self.servapi.drop(columns=['geometry']).merge(self.censal, how='left', on='csec').set_geometry('geometry')
+        out['profit'] = out['mean_revenue'] - out['renta_media_V']
+        out['net_profit'] = np.sign(out['profit'])
         if save_path:
             os.makedirs(os.path.dirname(save_path), exist_ok=True)
-            tosave = self.censal.copy()
-            tosave = tosave[['geometry', 'viviendas', 'n_flats', 'n_rooms', 'n_all', 'ratio_flats', 'ratio_rooms', 'ratio']]
+            tosave = out
+            tosave = tosave[['geometry', 'viviendas', 'n_flats', 'n_rooms', 'n_all', 'ratio_flats', 'ratio_rooms', 'ratio', 'mean_price', 'Mediana', 'p25', 'p75', 'profit', 'net_profit']]
             tosave.to_file(save_path, driver='GeoJSON')
         print("Computed ratios for flats and rooms in the city.")
         
