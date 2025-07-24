@@ -17,7 +17,7 @@ city_list = [x.capitalize() for x in cities.city.tolist()]
 
 st.title("Percentage of Airbnb's")
 st.text("You can select different cities and types of Airbnb rentals to explore the data and see how much housing"
-         " is devoted to Airbnb in different places. Hover over the map to get a result."
+         " is devoted to Airbnb in different places. Hover over the map to visualize a specific censal section."
          )
 # Division selection
 city = st.selectbox("Select a city", options=city_list)
