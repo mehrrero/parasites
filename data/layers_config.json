@@ -1,0 +1,26 @@
+{
+  "serpavi": {
+    "url": "https://services1.arcgis.com/nCKYwcSONQTkPA4K/ArcGIS/rest/services/Sistema_Estatal_de_Referencia_del_Precio_del_Alquiler_de_Vivienda_Solo_lectura/FeatureServer/0/query",
+    "epsg": 25830,
+    "use_json_geometry": false,
+    "include_inSR": false
+  },
+  "sociodemo": {
+    "url": "https://services1.arcgis.com/nCKYwcSONQTkPA4K/ArcGIS/rest/services/Datos_sociodemogr\u00e1ficos/FeatureServer/0/query",
+    "epsg": 3857,
+    "use_json_geometry": false,
+    "include_inSR": false
+  },
+  "censal": {
+    "url": "https://www.ine.es/servergis/rest/services/Hosted/SAS_seleccion_2021/FeatureServer/6/query",
+    "epsg": 102100,
+    "use_json_geometry": true,
+    "include_inSR": true
+  },
+  "renta": {
+    "url": "https://services1.arcgis.com/nCKYwcSONQTkPA4K/ArcGIS/rest/services/Evoluci\u00f3n_renta_per_c\u00e1pita_SSCC/FeatureServer/4/query",
+    "epsg": 4258,
+    "use_json_geometry": false,
+    "include_inSR": false
+  }
+}
